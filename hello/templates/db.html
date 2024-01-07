@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<h2>{{ answered_questions_count }}/500 questions answered</h2>
+
+<ul class="queue">
+  {% for question in questions %}
+      <li>
+        <strong>{{ question.question }}</strong>
+        <p>{{ question.answer }}</p>
+
+        <p><small>Asked {{ question.ask_count }} times</small></p>
+      </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}
