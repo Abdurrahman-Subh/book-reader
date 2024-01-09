@@ -1,7 +1,4 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block content %}
+{% extends "base.html" %} {% load static %} {% block content %}
 
 <div class="header">
   <div class="logo">
@@ -10,56 +7,133 @@
 </div>
 
 <div class="main">
-  <form action="/ask" method="post">
+  <form enctype="multipart/form-data" action="/ask" method="post">
     {% csrf_token %}
     <textarea name="question" id="question">{{ default_question }}</textarea>
 
-    <div class="buttons" {% if answer %}style="display: none"{% endif %}>
+    <div class="buttons" {% if answer %}style="display: none" {% endif %}>
       <button type="submit" id="ask-button">Sor</button>
     </div>
   </form>
 
   {% if answer %}
-    <p id="answer-container" class="hidden showing"><strong>Soru:</strong> <span id="answer">{{ answer }}</span> <button id="ask-another-button" style="display: block;">Başka bir soru sor</button></p>
+  <p id="answer-container" class="hidden showing">
+    <strong>Soru:</strong> <span id="answer">{{ answer }}</span>
+    <button id="ask-another-button" style="display: block">
+      Başka bir soru sor
+    </button>
+  </p>
   {% else %}
-    <p id="answer-container" class="hidden"><strong>Soru:</strong> <span id="answer"></span> <button id="ask-another-button" style="display: none;">Başka bir soru sor</button></p>
+  <p id="answer-container" class="hidden">
+    <strong>Soru:</strong> <span id="answer"></span>
+    <button id="ask-another-button" style="display: none">
+      Başka bir soru sor
+    </button>
+  </p>
   {% endif %}
+  <div style="padding-left: 16px; padding-right: 16px; margin-top: 10px">
+    <label
+      ondrop="handleDrop(event)"
+      ondragover="event.preventDefault()"
+      for="uploadFile__input"
+      style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 144px;
+        cursor: pointer;
+        border: 2px dashed #bee3f8;
+        border-radius: 0.375rem;
+        background-color: #edf2f7;
+        transition: all 0.2s ease-in-out;
+      "
+    >
+      <span style="position: relative">
+        <span
+          style="
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            padding: 4px;
+            background-color: #4299e1;
+            border-radius: 9999px;
+            color: #e2e8f0;
+          "
+        >
+        </span>
+      </span>
+      <span style="font-size: 0.75rem; text-align: center; margin-top: 12px">
+        Drag & Drop or <strong>Choose File</strong>
+      </span>
+      <span
+        style="
+          font-size: 0.75rem;
+          text-align: center;
+          margin-top: 6px;
+          opacity: 0.75;
+        "
+      >
+        Max 5MB
+      </span>
+      <input
+        id="uploadFile__input"
+        accept=".jpg,.png,.jpeg,.svg,.pdf"
+        onchange="handlePdfUpload(event)"
+        style="display: none"
+        multiple
+        type="file"
+      />
+    </label>
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+      "
+    >
+      <div style="font-size: 0.75rem; color: #343434">Formats: PDF</div>
+    </div>
+  </div>
 </div>
 
 <script>
-  $(document).ready(function() {
+  $(document).ready(function () {
     function randomInteger(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    var showText = function(target, message, index) {
+    var showText = function (target, message, index) {
       if (index < message.length) {
         var interval = randomInteger(30, 70);
         $(target).append(message[index++]);
-        setTimeout(function () { showText(target, message, index); }, interval);
+        setTimeout(function () {
+          showText(target, message, index);
+        }, interval);
       } else {
         history.pushState({}, null, "/question/" + window.newQuestionId);
         $("#ask-another-button").css("display", "block");
       }
-    }
+    };
 
-
-    $("textarea").bind('input propertychange', function(e) {
+    $("textarea").bind("input propertychange", function (e) {
       $(".buttons").show();
-      document.getElementById('answer-container').classList.remove("showing");
+      document.getElementById("answer-container").classList.remove("showing");
       clearTimeout(window.answerShower);
       $("#ask-another-button").css("display", "none");
     });
 
-    $("#ask-another-button").click(function(e) {
+    $("#ask-another-button").click(function (e) {
       $(".buttons").show();
-      document.getElementById('answer-container').classList.remove("showing");
+      document.getElementById("answer-container").classList.remove("showing");
       clearTimeout(window.answerShower);
       $("#ask-another-button").css("display", "none");
       $("textarea").select();
     });
 
-    $("form").submit(function(e) {
+    $("form").submit(function (e) {
       if (document.getElementById("question").value == "") {
         alert("Lütfen bir soru sor!");
         e.preventDefault();
@@ -71,17 +145,17 @@
       askButton.disabled = true;
 
       $.ajax({
-        type: 'POST',
-        url: '/ask',
+        type: "POST",
+        url: "/ask",
         data: $("form").serialize(),
         datatype: "json",
-        encode: true
-      }).done(function(data) {
+        encode: true,
+      }).done(function (data) {
         $(".buttons").hide();
 
-        var answer = document.getElementById('answer');
+        var answer = document.getElementById("answer");
         answer.innerHTML = "";
-        document.getElementById('answer-container').classList.add("showing");
+        document.getElementById("answer-container").classList.add("showing");
 
         showText("#answer", data.answer, 0);
 
@@ -95,9 +169,58 @@
       return false;
     });
   });
+  function handlePdfUpload(event) {
+    var file = event.target.files[0];
+
+    if (!file) {
+      alert("No file chosen.");
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      alert("Please select a PDF file.");
+      return;
+    }
+
+    var formData = new FormData();
+    formData.append("pdf", file);
+
+    $.ajax({
+      type: "POST",
+      url: "/upload-pdf/",
+      data: formData,
+      processData: false, // Prevent jQuery from processing the data
+      contentType: false, // Prevent jQuery from setting the Content-Type header
+      headers: {
+        "X-CSRFToken": getCsrfToken(), // Assuming getCsrfToken() gets your CSRF token
+      },
+    })
+      .done(function (data) {
+        console.log("PDF uploaded successfully:", data);
+        event.target.value = null;
+      })
+      .fail(function (jqXHR, textStatus) {
+        console.error("Error uploading PDF:", textStatus);
+        event.target.value = null;
+      });
+    event.target.value = null;
+  }
+  function getCsrfToken() {
+    var name = "csrftoken";
+    var cookies = document.cookie.split(";");
+    for (var i = 0; i < cookies.length; i++) {
+      var cookie = cookies[i];
+      while (cookie.charAt(0) == " ") {
+        cookie = cookie.substring(1, cookie.length);
+      }
+      if (cookie.indexOf(name + "=") == 0) {
+        return cookie.substring(name.length + 1, cookie.length);
+      }
+    }
+    return null;
+  }
 </script>
 
-<footer>
-</footer>
+<footer></footer>
 
 {% endblock %}

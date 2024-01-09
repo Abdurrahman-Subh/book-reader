@@ -4,6 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from dotenv import load_dotenv
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import default_storage
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 
 from .models import Question
 
@@ -176,3 +181,26 @@ def db(request):
 def question(request, id):
     question = Question.objects.get(pk=id)
     return render(request, "index.html", { "default_question": question.question, "answer": question.answer })
+
+def upload_pdf(request):
+    try:
+        if request.method == 'POST' and request.FILES['pdf']:
+            pdf_file = request.FILES['pdf']
+
+            if pdf_file.content_type != 'application/pdf':
+                return JsonResponse({'error': 'Invalid file type'}, status=400)
+
+            fs = FileSystemStorage()
+            file_name = 'book.pdf'
+            file_path = os.path.join(settings.BASE_DIR, file_name)
+
+            if fs.exists(file_path):  # Check if file exists
+                fs.delete(file_path)  # If yes, delete the existing file
+
+            file_name = fs.save(file_name, pdf_file)  # Save the new file
+
+            return JsonResponse({'message': 'PDF uploaded successfully', 'file_name': file_name})
+        
+        return JsonResponse({'error': 'No PDF file provided'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

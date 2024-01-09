@@ -1,6 +1,8 @@
 from django.urls import path, include
 
 from django.contrib import admin
+from . import views
+
 
 admin.autodiscover()
 
@@ -12,4 +14,5 @@ urlpatterns = [
     path("question/<int:id>", hello.views.question, name="question"),
     path("db", hello.views.db, name="db"),
     path("admin/", admin.site.urls),
+    path('upload-pdf/', views.upload_pdf, name='upload_pdf'),
 ]
