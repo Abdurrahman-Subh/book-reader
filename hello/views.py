@@ -25,8 +25,8 @@ COMPLETIONS_MODEL = "text-davinci-003"
 
 MODEL_NAME = "curie"
 
-DOC_EMBEDDINGS_MODEL = f"text-search-{MODEL_NAME}-doc-001"
-QUERY_EMBEDDINGS_MODEL = f"text-search-{MODEL_NAME}-query-001"
+DOC_EMBEDDINGS_MODEL = f"text-embedding-ada-002"
+QUERY_EMBEDDINGS_MODEL = f"text-embedding-ada-002"
 
 MAX_SECTION_LEN = 500
 SEPARATOR = "\n* "

@@ -27,7 +27,7 @@ COMPLETIONS_MODEL = "text-davinci-003"
 
 MODEL_NAME = "curie"
 
-DOC_EMBEDDINGS_MODEL = f"text-search-{MODEL_NAME}-doc-001"
+DOC_EMBEDDINGS_MODEL = f"text-embedding-ada-002"
 
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 
