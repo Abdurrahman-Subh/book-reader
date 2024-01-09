@@ -16,6 +16,7 @@ import pandas as pd
 import openai
 import numpy as np
 import os
+from subprocess import call
 
 load_dotenv('.env')
 
@@ -199,6 +200,7 @@ def upload_pdf(request):
 
             file_name = fs.save(file_name, pdf_file)  # Save the new file
 
+            call(["python", "scripts/pdf_to_pages_embeddings.py", "--pdf", "book.pdf"])
             return JsonResponse({'message': 'PDF uploaded successfully', 'file_name': file_name})
         
         return JsonResponse({'error': 'No PDF file provided'}, status=400)
