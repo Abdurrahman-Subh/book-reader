@@ -16,13 +16,14 @@ import pandas as pd
 import openai
 import numpy as np
 import os
+import sys
 from subprocess import call
 
 load_dotenv('.env')
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
-COMPLETIONS_MODEL = "text-davinci-003"
+COMPLETIONS_MODEL = "gpt-3.5-turbo-instruct"
 
 MODEL_NAME = "curie"
 
@@ -53,8 +54,22 @@ def get_query_embedding(text: str) -> list[float]:
     return get_embedding(text, QUERY_EMBEDDINGS_MODEL)
 
 def vector_similarity(x: list[float], y: list[float]) -> float:
+    # Convert lists to numpy arrays
+    x_array = np.array(x)
+    y_array = np.array(y)
 
-    return np.dot(np.array(x), np.array(y))
+    # Determine the length of the longer vector
+    max_length = max(len(x_array), len(y_array))
+
+    # Pad the shorter vector with zeros
+    if len(x_array) < max_length:
+        x_array = np.pad(x_array, (0, max_length - len(x_array)), 'constant')
+    if len(y_array) < max_length:
+        y_array = np.pad(y_array, (0, max_length - len(y_array)), 'constant')
+
+    # Compute dot product
+    return np.dot(x_array, y_array)
+
 
 def order_document_sections_by_query_similarity(query: str, contexts: dict[(str, str), np.array]) -> list[(float, (str, str))]:
     """
@@ -64,11 +79,13 @@ def order_document_sections_by_query_similarity(query: str, contexts: dict[(str,
     Return the list of document sections, sorted by relevance in descending order.
     """
     query_embedding = get_query_embedding(query)
+   
 
     document_similarities = sorted([
         (vector_similarity(query_embedding, doc_embedding), doc_index) for doc_index, doc_embedding in contexts.items()
     ], reverse=True)
-
+    print("query_embedding")
+    sys.stdout.flush()  
     return document_similarities
 
 def load_embeddings(fname: str) -> dict[tuple[str, str], list[float]]:
@@ -89,6 +106,7 @@ def construct_prompt(question: str, context_embeddings: dict, df: pd.DataFrame) 
     """
     Fetch relevant embeddings
     """
+
     most_relevant_document_sections = order_document_sections_by_query_similarity(question, context_embeddings)
 
     chosen_sections = []
@@ -135,6 +153,7 @@ def answer_query_with_context(
     )
 
     print("===\n", prompt)
+    sys.stdout.flush()
 
     response = openai.Completion.create(
                 prompt=prompt,
@@ -148,30 +167,39 @@ def index(request):
 
 @csrf_exempt
 def ask(request):
-    question_asked = request.POST.get("question", "")
+    try:
+        question_asked = request.POST.get("question", "")
+        if not question_asked.endswith('?'):
+            question_asked += '?'
 
-    if not question_asked.endswith('?'):
-        question_asked += '?'
+        previous_question = Question.objects.filter(question=question_asked).first()
 
-    previous_question = Question.objects.filter(question=question_asked).first()
+        if previous_question:
+            print("previously asked and answered: " + previous_question.answer)
+            previous_question.ask_count = previous_question.ask_count + 1
+            previous_question.save()
+            return JsonResponse({ "question": previous_question.question, "answer": previous_question.answer, "id": previous_question.pk })
 
-    if previous_question:
-        print("previously asked and answered: " + previous_question.answer)
-        previous_question.ask_count = previous_question.ask_count + 1
-        previous_question.save()
-        return JsonResponse({ "question": previous_question.question, "answer": previous_question.answer, "id": previous_question.pk })
+        df = pd.read_csv('book.pdf.pages.csv')
 
-    df = pd.read_csv('book.pdf.pages.csv')
-    document_embeddings = load_embeddings('book.pdf.embeddings.csv')
-    answer, context = answer_query_with_context(question_asked, df, document_embeddings)
 
-    project_uuid = '6314e4df'
-    voice_uuid = '0eb3a3f1'
+        document_embeddings = load_embeddings('book.pdf.embeddings.csv')
 
-    question = Question(question=question_asked, answer=answer, context=context)
-    question.save()
 
-    return JsonResponse({ "question": question.question, "answer": answer, "id": question.pk })
+        answer, context = answer_query_with_context(question_asked, df, document_embeddings)
+        print("answered")
+        sys.stdout.flush()
+
+
+        project_uuid = '6314e4df'
+        voice_uuid = '0eb3a3f1'
+
+        question = Question(question=question_asked, answer=answer, context=context)
+        question.save()
+
+        return JsonResponse({ "question": question.question, "answer": answer, "id": question.pk })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
 def db(request):
